@@ -1,5 +1,6 @@
 package com.asifddlks.fingerprintauthentication
 
+import android.app.Activity
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.DialogInterface
@@ -11,11 +12,15 @@ import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.CancellationSignal
+import android.provider.Settings
+import android.util.Log
 import android.widget.Button
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+import androidx.biometric.BiometricManager.from
 import androidx.core.app.ActivityCompat
 
 class MainActivity : AppCompatActivity() {
@@ -38,24 +43,45 @@ class MainActivity : AppCompatActivity() {
 
             }
         }
+
+    var createCredentialsResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // There are no request codes
+            val data: Intent? = result.data
+            //doSomeOperations()
+            //data.extras
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        checkBiometricSupport()
+        //checkBiometricSupport()
+        //checkBiometricAvailable()
+        if(checkBiometricAvailable())prepareBiometricAuthentication()
 
-        val button = findViewById<Button>(R.id.btn_authenticate)
-        button.setOnClickListener{
-            val biometricPrompt : BiometricPrompt = BiometricPrompt.Builder(this)
-                .setTitle("Title")
-                .setSubtitle("Authentication is required")
-                .setDescription("Fingerprint Authentication")
-                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
-                .build()
+    }
 
-            biometricPrompt.authenticate(getCancellationSignal(), mainExecutor, authenticationCallback)
+    private fun prepareBiometricAuthentication() {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val button = findViewById<Button>(R.id.btn_authenticate)
+            button.setOnClickListener{
+                val biometricPrompt : BiometricPrompt = BiometricPrompt.Builder(this)
+                    .setTitle("Title")
+                    .setSubtitle("Authentication is required")
+                    .setDescription("Fingerprint Authentication")
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                    .build()
+                biometricPrompt.authenticate(getCancellationSignal(), mainExecutor, authenticationCallback)
+            }
         }
+        else{
+
+        }
+
     }
 
     private fun  notifyUser(message: String) {
@@ -85,6 +111,41 @@ class MainActivity : AppCompatActivity() {
         return if (packageManager.hasSystemFeature(PackageManager.FEATURE_FINGERPRINT)) {
             true
         } else true
+    }
+
+    private fun checkBiometricAvailable():Boolean{
+
+        var isAvailable = false
+        val biometricManager = androidx.biometric.BiometricManager.from(this)
+
+        when (biometricManager.canAuthenticate(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)) {
+            BiometricManager.BIOMETRIC_SUCCESS ->
+            {
+                Log.d("MY_APP_TAG", "App can authenticate using biometrics.")
+                isAvailable = true
+            }
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
+            {
+                Log.e("MY_APP_TAG", "No biometric features available on this device.")
+                isAvailable = false
+            }
+            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
+            {
+                Log.e("MY_APP_TAG", "Biometric features are currently unavailable.")
+                isAvailable = false
+            }
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
+                // Prompts the user to create credentials that your app accepts.
+                val enrollIntent = Intent(Settings.ACTION_BIOMETRIC_ENROLL).apply {
+                    putExtra(Settings.EXTRA_BIOMETRIC_AUTHENTICATORS_ALLOWED,
+                        BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
+                }
+                //startActivityForResult(enrollIntent, REQUEST_CODE)
+                createCredentialsResultLauncher.launch(enrollIntent)
+            }
+        }
+        return isAvailable
+
     }
 
 }
