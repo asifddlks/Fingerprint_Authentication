@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.biometrics.BiometricManager
 import android.hardware.biometrics.BiometricPrompt
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
@@ -13,6 +14,8 @@ import android.os.CancellationSignal
 import android.widget.Button
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
+import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.core.app.ActivityCompat
 
 class MainActivity : AppCompatActivity() {
@@ -35,7 +38,7 @@ class MainActivity : AppCompatActivity() {
 
             }
         }
-    @RequiresApi(Build.VERSION_CODES.P)
+    @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -48,9 +51,8 @@ class MainActivity : AppCompatActivity() {
                 .setTitle("Title")
                 .setSubtitle("Authentication is required")
                 .setDescription("Fingerprint Authentication")
-                .setNegativeButton("Cancel", this.mainExecutor, DialogInterface.OnClickListener { dialog, which ->
-
-                }).build()
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                .build()
 
             biometricPrompt.authenticate(getCancellationSignal(), mainExecutor, authenticationCallback)
         }
