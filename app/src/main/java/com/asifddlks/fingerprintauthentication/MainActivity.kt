@@ -20,6 +20,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+import androidx.biometric.BiometricManager.BIOMETRIC_ERROR_UNSUPPORTED
 import androidx.biometric.BiometricManager.from
 import androidx.core.app.ActivityCompat
 
@@ -60,31 +61,49 @@ class MainActivity : AppCompatActivity() {
 
         //checkBiometricSupport()
         //checkBiometricAvailable()
-        if(checkBiometricAvailable())prepareBiometricAuthentication()
+        //if(checkBiometricAvailable())prepareBiometricAuthentication()
+        //if(checkBiometricSupport())prepareBiometricAuthentication()
+        prepareBiometricAuthentication()
 
     }
 
     private fun prepareBiometricAuthentication() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val button = findViewById<Button>(R.id.btn_authenticate)
-            button.setOnClickListener{
-                val biometricPrompt : BiometricPrompt = BiometricPrompt.Builder(this)
-                    .setTitle("Title")
-                    .setSubtitle("Authentication is required")
-                    .setDescription("Fingerprint Authentication")
-                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
-                    .build()
-                biometricPrompt.authenticate(getCancellationSignal(), mainExecutor, authenticationCallback)
+            if(checkBiometricAvailable()){
+                val button = findViewById<Button>(R.id.btn_authenticate)
+                button.setOnClickListener{
+                    val biometricPrompt : BiometricPrompt = BiometricPrompt.Builder(this)
+                        .setTitle("Title")
+                        .setSubtitle("Authentication is required")
+                        .setDescription("Fingerprint Authentication")
+                        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                        .build()
+                    biometricPrompt.authenticate(getCancellationSignal(), mainExecutor, authenticationCallback)
+                }
             }
-        }
-        else{
 
         }
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P){
+            if(checkBiometricSupport()){
+                val button = findViewById<Button>(R.id.btn_authenticate)
+                button.setOnClickListener{
+                    val biometricPrompt : BiometricPrompt = BiometricPrompt.Builder(this)
+                        .setTitle("Title")
+                        .setSubtitle("Authentication is required")
+                        .setDescription("Fingerprint Authentication")
+                        .setNegativeButton("Cancel", mainExecutor, object : DialogInterface.OnClickListener{
+                            override fun onClick(dialogInterface: DialogInterface?, i: Int) {
+                            }
+                        })
+                        .build()
+                    biometricPrompt.authenticate(getCancellationSignal(), mainExecutor, authenticationCallback)
+                }
+            }
 
+        }
     }
-
-    private fun  notifyUser(message: String) {
+        fun  notifyUser(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
@@ -123,6 +142,11 @@ class MainActivity : AppCompatActivity() {
             {
                 Log.d("MY_APP_TAG", "App can authenticate using biometrics.")
                 isAvailable = true
+            }
+            BIOMETRIC_ERROR_UNSUPPORTED ->
+            {
+                Log.d("MY_APP_TAG", "The user can't authenticate because the specified options are incompatible with the current Android version.")
+                isAvailable = false
             }
             BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
             {
